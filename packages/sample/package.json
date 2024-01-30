@@ -1,0 +1,17 @@
+{
+  "name": "sample-project",
+  "version": "1.0.0",
+  "description": "A sample project",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "./test.sh",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "moment": "^2.29.4"
+  },
+  "devDependencies": {
+    "jest": "^29.6.2"
+  }
+}

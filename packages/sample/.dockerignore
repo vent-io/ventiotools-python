@@ -1,0 +1,2 @@
+# Add files here, especially large asset files, as these are otherwise laboriously
+# and unnecessarily copied into the Docker build context on each `docker build`

@@ -1,0 +1,32 @@
+name: "Test packages v1.0.0"
+
+on:
+  pull_request:
+    branches: [dev, main]
+    types: [opened, synchronize]
+
+jobs:
+  get_packages:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.step.outputs.packages }}
+    steps:
+      - uses: vent-io/vent-io/.github/actions/get_packages@main
+        id: step
+        with:
+          only_changed: "true"
+  test_and_scan:
+    needs: get_packages
+    if: ${{ needs.get_packages.outputs.packages != '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        packages: ${{ fromJSON(needs.get_packages.outputs.packages) }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Execute lerna test ${{ matrix.packages.name }}
+        run: npx lerna run test --scope ${{ matrix.packages.name }} --stream

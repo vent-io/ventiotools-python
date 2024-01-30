@@ -1,0 +1,123 @@
+name: "Build and deploy containers and infrastructure to dev or uat v1.1.0"
+
+on:
+  push:
+    branches: [main, dev]
+
+permissions:
+  contents: write
+  id-token: write
+  actions: read
+  statuses: write
+
+jobs:
+  get_packages:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.step.outputs.packages }}
+    steps:
+      # Runs by the bot will always be triggered after the MERGE of a PR which already created the new packages
+      # So we need to get ALL packages here, not only the changed packages
+      - uses: vent-io/vent-io/.github/actions/get_packages@main
+        id: step
+
+  increase_version_number:
+    if: ${{ !(github.actor == 'ventiobot[bot]') && needs.get_packages.outputs.packages != '' }}
+    environment: ${{ (((github.head_ref || github.ref_name) == 'main') && 'uat') || 'dev' }}
+    needs: get_packages
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VENTIO_BOT_SIGNINGKEY: ${{ secrets.VENTIO_BOT_SIGNINGKEY }}
+      VENTIO_BOT_PASSPHRASE: ${{ secrets.VENTIO_BOT_PASSPHRASE }}
+      GH_APP_TOKEN: ${{ secrets.GH_APP_TOKEN }}
+      GH_APP_INSTALLATION_ID: 31070143 # The installation id of the github bot in our gh org. It is uncritical information
+    steps:
+      - name: Generate JWT
+        id: jwt
+        uses: vent-io/vent-io/.github/actions/gh_app_jwt@main
+        with:
+          app_id: ${{ secrets.GH_APP_ID }}
+          private_key: ${{ env.GH_APP_TOKEN }}
+      - name: Get installation token
+        id: i_token
+        run: |
+          tokens=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ steps.jwt.outputs.token }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/app/installations/${{ env.GH_APP_INSTALLATION_ID }}/access_tokens")
+          token=$(echo $tokens | jq -r '.token')
+          echo token=$token >> $GITHUB_OUTPUT
+      - name: Checkout repository
+        run: |
+          git clone https://x-access-token:${{ steps.i_token.outputs.token }}@github.com/${{ github.repository }}.git .
+          git checkout ${{ github.head_ref || github.ref_name }}
+      - name: Log into ventio-bot
+        run: |
+          git config --global user.name ventio-bot
+          git config --global user.email admin@vent.io
+      - name: Import bot's GPG key for signing commits
+        id: import-gpg
+        uses: crazy-max/ghaction-import-gpg@111c56156bcc6918c056dbef52164cfa583dc549 #tag v5
+        with:
+          gpg_private_key: ${{ env.VENTIO_BOT_SIGNINGKEY }}
+          passphrase: ${{ env.VENTIO_BOT_PASSPHRASE }}
+          git_config_global: true
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_tag_gpgsign: true
+
+      - name: prerelease for dev branches
+        if: ${{ (github.head_ref || github.ref_name) == 'dev' }}
+        run: npx lerna version --createRelease=github --conventional-commits --conventional-prerelease --preid dev --yes
+      - name: Full Release for main branches
+        if: ${{ (github.head_ref || github.ref_name) == 'main' }}
+        run: npx lerna version --createRelease=github --conventional-commits --conventional-graduate --yes
+      - name: Merge back
+        if: ${{ (github.head_ref || github.ref_name) == 'main' }}
+        run: |
+          git checkout dev
+          git merge --no-edit main
+          git push origin dev
+
+  build:
+    name: Build ${{ matrix.packages.name }}
+    needs: get_packages
+    if: ${{ (github.actor == 'ventiobot[bot]') && needs.get_packages.outputs.packages != '' }}
+    strategy:
+      matrix:
+        packages: ${{ fromJSON(needs.get_packages.outputs.packages) }}
+    uses: vent-io/vent-io/.github/workflows/deploy_container.yaml@main
+    with:
+      acr_name: ${{ (((github.head_ref || github.ref_name) == 'main') && 'uatvioacr') || 'devvioacr' }}
+      working_dir: packages/${{ matrix.packages.name }}
+      repository_name: ${{ github.event.repository.name }}
+      package_name: ${{ matrix.packages.name }}
+      signed: false
+      tag: ${{ matrix.packages.version }}
+      env: ${{ (((github.head_ref || github.ref_name) == 'main') && 'uat') || 'dev' }}
+      include_sym_links: false
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+  deploy:
+    name: Deploy terraform
+    needs: [get_packages, build]
+    if: ${{ success() || failure() }}
+    uses: vent-io/vent-io/.github/workflows/deploy_terraform.yaml@main
+    with:
+      env: ${{ (((github.head_ref || github.ref_name)  == 'main') && 'uat') || 'dev' }}
+      working_dir: infrastructure
+      self_approve: true
+      fail_on_fmt_err: false
+      fail_on_tflint_err: false
+      tf_module_enabled: true
+      packages_json: ${{ needs.get_packages.outputs.packages }}
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      GH_APP_ID: ${{ secrets.GH_APP_ID }}
+      GH_APP_TOKEN: ${{ secrets.GH_APP_TOKEN }}

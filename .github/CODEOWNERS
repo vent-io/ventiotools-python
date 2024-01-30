@@ -1,0 +1,4 @@
+# This CODEOWNERS file restricts access to the folders infrastructure and .github.
+
+# Restrict access to the .github folder
+/.github/* @vent-io/vio-ch-site-reliability-engineers-basic

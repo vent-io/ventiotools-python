@@ -1,0 +1,64 @@
+name: "Publish to prod v1.0.0"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  actions: read
+  statuses: write
+
+jobs:
+  get_packages:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.step.outputs.packages }}
+      latest_tag: ${{ steps.tag.outputs.latest_tag }}
+    steps:
+      - uses: vent-io/vent-io/.github/actions/get_packages@main
+        id: step
+      - id: tag
+        run: "echo \"latest_tag=\"$(git describe --abbrev=0 --tags) >> $GITHUB_OUTPUT"
+      - run: "echo  Latest tag is $(git describe --abbrev=0 --tags)"
+
+  push_container:
+    needs: get_packages
+    name: Build and push container ${{ matrix.packages.name }}
+    strategy:
+      matrix:
+        packages: ${{ fromJson(needs.get_packages.outputs.packages) }}
+    uses: vent-io/vent-io/.github/workflows/deploy_container.yaml@main
+    with:
+      acr_name: prodvioacr
+      working_dir: packages/${{ matrix.packages.name }}
+      repository_name: ${{ github.event.repository.name }}
+      package_name: ${{ matrix.packages.name }}
+      tag: ${{ matrix.packages.version }}
+      env: prod
+      signed: false
+      git_ref: ${{ needs.get_packages.outputs.latest_tag }}
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+  deploy_infrastructure:
+    needs: [get_packages, push_container]
+    name: Deploy infrastructure ${{ matrix.packages.name }}
+    uses: vent-io/vent-io/.github/workflows/deploy_terraform.yaml@main
+    with:
+      env: prod
+      working_dir: infrastructure
+      self_approve: false
+      fail_on_fmt_err: true
+      fail_on_tflint_err: true
+      tf_module_enabled: true
+      packages_json: ${{ needs.get_packages.outputs.packages }}
+      git_ref: ${{ needs.get_packages.outputs.latest_tag }}
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      GH_APP_ID: ${{ secrets.GH_APP_ID }}
+      GH_APP_TOKEN: ${{ secrets.GH_APP_TOKEN }}

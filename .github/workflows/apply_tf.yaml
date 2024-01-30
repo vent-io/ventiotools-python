@@ -1,0 +1,29 @@
+name: "Apply Terraform v1.0.0"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  get_packages:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.step.outputs.packages }}
+    steps:
+      - uses: vent-io/vent-io/.github/actions/get_packages@main
+        id: step
+
+  apply:
+    needs: get_packages
+    uses: vent-io/vent-io/.github/workflows/deploy_terraform.yaml@main
+    with:
+      env: ${{ (((github.head_ref || github.ref_name) == 'main') && 'uat') || 'dev' }}
+      working_dir: infrastructure
+      self_approve: true
+      fail_on_fmt_err: ${{ (((github.head_ref || github.ref_name) == 'main') && true) || false }}
+      fail_on_tflint_err: ${{ (((github.head_ref || github.ref_name) == 'main') && true) || false }}
+      packages_json: ${{ needs.get_packages.outputs.packages }}
+      git_ref: ${{ github.ref }}
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}

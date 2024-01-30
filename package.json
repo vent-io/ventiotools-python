@@ -1,0 +1,20 @@
+{
+  "name": "project-template",
+  "version": "1.0.0",
+  "description": "A repository template",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vent-io/project-template.git"
+  },
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/vent-io/project-template/issues"
+  },
+  "homepage": "https://github.com/vent-io/project-template#readme",
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "lerna": "^7.0.2"
+  }
+}

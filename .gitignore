@@ -1,0 +1,23 @@
+### Terraform ###
+**/.terraform/*
+
+.terraform.lock.hcl
+
+*.tfstate
+*.tfstate.*
+
+crash.log
+crash.*.log
+
+.terraformrc
+terraform.rc
+
+### Visual Studio Code ###
+.vscode/*
+
+
+### IntelliJ/Pycharm ###
+.idea
+
+### Node ###
+node_modules
