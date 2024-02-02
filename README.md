@@ -21,6 +21,11 @@ Ventiotools can easily be accessed after installing it via pip:
 ```
 
 # Auto_Feature_Engineering:
+```         
+>>> from ventiotools import auto_feature_engineering
+>>>
+>>> Your code here... 
+```
 
 Auto_Feature_Engineering is a powerful subpackage of Ventiotools built for efficiently creating features from large datasets by harnessing the capabilities of Apache Spark. This package is specifically tailored to handle statistical and time series feature engineering, making it an ideal choice for data scientists and engineers working with extensive datasets.
 
