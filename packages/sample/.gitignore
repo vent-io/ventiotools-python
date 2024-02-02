@@ -1,4 +1,0 @@
-# Your package can have its own, specific .gitignore as well.
-# It will be respected in addition to any other .gitignore files
-# further up the tree.
-node_modules
