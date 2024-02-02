@@ -12,7 +12,7 @@
   },
   "homepage": "https://github.com/vent-io/project-template#readme",
   "workspaces": [
-    "packages/*"
+    "src/*"
   ],
   "devDependencies": {
     "lerna": "^7.0.2"

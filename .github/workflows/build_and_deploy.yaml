@@ -101,23 +101,4 @@ jobs:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-  deploy:
-    name: Deploy terraform
-    needs: [get_packages, build]
-    if: ${{ success() || failure() }}
-    uses: vent-io/vent-io/.github/workflows/deploy_terraform.yaml@main
-    with:
-      env: ${{ (((github.head_ref || github.ref_name)  == 'main') && 'uat') || 'dev' }}
-      working_dir: infrastructure
-      self_approve: true
-      fail_on_fmt_err: false
-      fail_on_tflint_err: false
-      tf_module_enabled: true
-      packages_json: ${{ needs.get_packages.outputs.packages }}
-    secrets:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      GH_APP_ID: ${{ secrets.GH_APP_ID }}
-      GH_APP_TOKEN: ${{ secrets.GH_APP_TOKEN }}
+      
