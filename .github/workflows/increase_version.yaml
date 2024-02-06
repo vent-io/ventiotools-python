@@ -1,4 +1,4 @@
-name: "Build and deploy containers and infrastructure to dev or uat v1.1.0"
+name: "Increase version v1.1.0"
 
 on:
   push:
@@ -79,26 +79,3 @@ jobs:
           git checkout dev
           git merge --no-edit main
           git push origin dev
-
-  build:
-    name: Build ${{ matrix.packages.name }}
-    needs: get_packages
-    if: ${{ (github.actor == 'ventiobot[bot]') && needs.get_packages.outputs.packages != '' }}
-    strategy:
-      matrix:
-        packages: ${{ fromJSON(needs.get_packages.outputs.packages) }}
-    uses: vent-io/vent-io/.github/workflows/deploy_container.yaml@main
-    with:
-      acr_name: ${{ (((github.head_ref || github.ref_name) == 'main') && 'uatvioacr') || 'devvioacr' }}
-      working_dir: packages/${{ matrix.packages.name }}
-      repository_name: ${{ github.event.repository.name }}
-      package_name: ${{ matrix.packages.name }}
-      signed: false
-      tag: ${{ matrix.packages.version }}
-      env: ${{ (((github.head_ref || github.ref_name) == 'main') && 'uat') || 'dev' }}
-      include_sym_links: false
-    secrets:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      
