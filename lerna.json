@@ -2,6 +2,6 @@
   "$schema": "https://unpkg.com/lerna/schemas/lerna-schema.json",
   "version": "independent",
   "packages": [
-    "src/*"
+    "packages/*"
   ]
 }

@@ -26,7 +26,7 @@ jobs:
     needs: get_packages
     runs-on: ubuntu-latest
     env:
-      working-directory: src/${{ matrix.packages.name }}
+      working-directory: packages/${{ matrix.packages.name }}
     strategy:
       matrix:
         packages: ${{ fromJSON(needs.get_packages.outputs.packages) }}
