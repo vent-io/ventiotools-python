@@ -1,0 +1,20 @@
+{
+    "name": "autp_feature_engineering",
+    "version": "0.0.1",
+    "description": "",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/vent-io/project-template.git"
+    },
+    "author": "",
+    "bugs": {
+        "url": "https://github.com/vent-io/project-template/issues"
+    },
+    "homepage": "https://github.com/vent-io/project-template#readme",
+    "workspaces": [
+        "src/*"
+    ],
+    "devDependencies": {
+        "lerna": "^7.0.2"
+    }
+}

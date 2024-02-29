@@ -5,7 +5,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
   actions: read
   statuses: write
 
@@ -19,46 +18,28 @@ jobs:
       - uses: vent-io/vent-io/.github/actions/get_packages@main
         id: step
       - id: tag
-        run: "echo \"latest_tag=\"$(git describe --abbrev=0 --tags) >> $GITHUB_OUTPUT"
+        run: 'echo "latest_tag="$(git describe --abbrev=0 --tags) >> $GITHUB_OUTPUT'
       - run: "echo  Latest tag is $(git describe --abbrev=0 --tags)"
 
-  push_container:
+  build:
+    name: Build ${{ matrix.packages.name }}
     needs: get_packages
-    name: Build and push container ${{ matrix.packages.name }}
+    runs-on: ubuntu-latest
+    env:
+      working-directory: packages/${{ matrix.packages.name }}
     strategy:
       matrix:
-        packages: ${{ fromJson(needs.get_packages.outputs.packages) }}
-    uses: vent-io/vent-io/.github/workflows/deploy_container.yaml@main
-    with:
-      acr_name: prodvioacr
-      working_dir: packages/${{ matrix.packages.name }}
-      repository_name: ${{ github.event.repository.name }}
-      package_name: ${{ matrix.packages.name }}
-      tag: ${{ matrix.packages.version }}
-      env: prod
-      signed: false
-      git_ref: ${{ needs.get_packages.outputs.latest_tag }}
-    secrets:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-  deploy_infrastructure:
-    needs: [get_packages, push_container]
-    name: Deploy infrastructure ${{ matrix.packages.name }}
-    uses: vent-io/vent-io/.github/workflows/deploy_terraform.yaml@main
-    with:
-      env: prod
-      working_dir: infrastructure
-      self_approve: false
-      fail_on_fmt_err: true
-      fail_on_tflint_err: true
-      tf_module_enabled: true
-      packages_json: ${{ needs.get_packages.outputs.packages }}
-      git_ref: ${{ needs.get_packages.outputs.latest_tag }}
-    secrets:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      GH_APP_ID: ${{ secrets.GH_APP_ID }}
-      GH_APP_TOKEN: ${{ secrets.GH_APP_TOKEN }}
+        packages: ${{ fromJSON(needs.get_packages.outputs.packages) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: pyproject.toml
+      - name: Build package
+        run: pdm build
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
