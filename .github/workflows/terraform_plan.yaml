@@ -29,7 +29,7 @@ jobs:
   plan:
     needs: [check_if_terraform_changed, get_packages]
     if: ${{ needs.check_if_terraform_changed.outputs.changed == 'true' }}
-    uses: vent-io/vent-io/.github/workflows/precheck_terraform_plan_migration.yaml@main
+    uses: vent-io/vent-io/.github/workflows/precheck_terraform_plan.yaml@main
     with:
       packages_json: ${{ needs.get_packages.outputs.packages }}
       working_dir: infrastructure
