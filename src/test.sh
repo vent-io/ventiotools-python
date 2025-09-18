@@ -17,7 +17,7 @@ test_directly() {
     # Use `export` for sub-processes to see these variables. Use single quotes to force
     # literal interpretation, with no interpolation etc.
     export NODE_OPTIONS='--trace-warnings'
-    npm install && npx jest
+    npm install --ignore-scripts && npx jest
 }
 
 test_via_docker(){
